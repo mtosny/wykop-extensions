@@ -3,7 +3,8 @@
   "description": "Zbiór rozszerzeń usprawniających przeglądanie portalu Wykop.pl",
   "manifest_version": 2,
   "name": "WykopPlExtensions",
-  "version": "1.0",
+  "version": "1.1",
+  "homepage_url": "https://github.com/mdn/webextensions-examples/tree/master/borderify",
   "icons": {
     "96": "icons/favicon-96x96.png"
   },
@@ -11,7 +12,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.wykop.pl/*"],
-      "js": ["hide-articles.js"]
+      "js": ["content_scripts/hide-articles.js"]
     }
   ],
 
