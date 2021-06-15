@@ -1,3 +1,45 @@
+var cleaningServiceFactory = function(storedData, hiddenArticlesStorage){
+	
+	var storedData = storedData;
+	var hiddenArticlesStorage = hiddenArticlesStorage;
+	
+	var articleStorageTimeInSeconds = 5*24*60*60; // 5 days
+	var timeBetweenCleaningsInSeconds = 1*60*60; // 1 hour
+	
+	var initializeCleaningDataWhenNeeded = function(){
+		if (!storedData.lastCleaningTime){
+			storedData.lastCleaningTime = new Date(0).getTime(); // data has never been cleaned
+		}
+	};
+	
+	var cleanOldArticles = function(){
+		var nextCleaningTime = new Date(storedData.lastCleaningTime);
+		nextCleaningTime.setSeconds(nextCleaningTime.getSeconds() + timeBetweenCleaningsInSeconds);
+		if (nextCleaningTime.getTime() > Date.now()){
+			return;
+		}
+		
+		debugger;
+		
+		var maxTimeOfHiddenArticleInStorage = new Date();
+		maxTimeOfHiddenArticleInStorage.setSeconds(maxTimeOfHiddenArticleInStorage.getSeconds() - articleStorageTimeInSeconds);
+		
+		var removingPredicate = function(hiddenArticleData){
+			return hiddenArticleData.hidingTime < maxTimeOfHiddenArticleInStorage.getTime();
+		}
+		hiddenArticlesStorage.removeHiddenArticle(removingPredicate);
+		
+		storedData.lastCleaningTime = Date.now();
+		browser.storage.local.set(storedData);
+	};
+	
+	initializeCleaningDataWhenNeeded();
+	
+	return {
+		cleanOldArticles: cleanOldArticles
+	};
+};
+
 var hiddenArticlesStorageFactory = function(storedData){
 	
 	var storedData = storedData;
@@ -12,6 +54,16 @@ var hiddenArticlesStorageFactory = function(storedData){
 		return !!storedData.hiddenArticles[articleLinkUrl];
 	}
 	
+	var removeHiddenArticle = function(predicateFn){
+		for (var articleLinkUrl of Object.keys(storedData.hiddenArticles)){
+			if (predicateFn(storedData.hiddenArticles[articleLinkUrl])){
+				delete storedData.hiddenArticles[articleLinkUrl];
+			}
+		}
+		
+		browser.storage.local.set(storedData);
+	}
+	
 	var setLinkAsHidden = function(link){
 		storedData.hiddenArticles[link] = {hidingTime: Date.now()};
 		browser.storage.local.set(storedData);
@@ -21,6 +73,7 @@ var hiddenArticlesStorageFactory = function(storedData){
 	
 	return {
 		isArticleHidden: isArticleHidden,
+		removeHiddenArticle: removeHiddenArticle,
 		setLinkAsHidden: setLinkAsHidden
 	};
 };
@@ -70,6 +123,8 @@ try {
 	browser.storage.local.get().then(storedData => {
 		var hiddenArticlesStorage = new hiddenArticlesStorageFactory(storedData);
 		var service = new hiddenArticlesUiServiceFactory(hiddenArticlesStorage);
+		
+		new cleaningServiceFactory(storedData, hiddenArticlesStorage).cleanOldArticles();
 		
 		var articleNodes = service.getArticleNodes();		
 		for (var articleNode of articleNodes)
